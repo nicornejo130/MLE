@@ -1,0 +1,18 @@
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# macOS
+.DS_Store
+
+# Test and coverage reports
+.coverage
+coverage.xml
+htmlcov/
+reports/
+tests/reports/
