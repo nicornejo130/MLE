@@ -77,3 +77,47 @@ if self._model is None:
 ```
 
 The API path always trains the model before prediction, so this fallback only affects the standalone interface used by the tests.
+
+---
+
+## Part II: API
+
+The API was implemented in `challenge/api.py` using FastAPI.
+
+The model is trained on the first prediction request and cached in memory afterward. This avoids retraining on every request while keeping the implementation simple and aligned with the challenge structure.
+
+The `/predict` endpoint validates the three raw fields required by the model:
+
+```text
+OPERA
+TIPOVUELO
+MES
+```
+
+Validation rules:
+
+```text
+OPERA must exist in the training data.
+TIPOVUELO must be either I or N.
+MES must be an integer between 1 and 12.
+```
+
+Invalid inputs return HTTP 400 responses. Valid inputs return predictions in the expected format:
+
+```json
+{"predict": [0, 1]}
+```
+
+---
+
+## Test Compatibility
+
+`tests/model/test_model.py` loads the dataset using a path relative to the current working directory:
+
+```python
+self.data = pd.read_csv(filepath_or_buffer="../data/data.csv")
+```
+
+This path only resolves when pytest runs from inside `tests/`, while `make model-test` runs from the repository root.
+
+To keep both the tests and the Makefile untouched, a minimal `tests/conftest.py` was added to run the test session from the expected working directory.
