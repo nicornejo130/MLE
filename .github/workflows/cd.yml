@@ -1,0 +1,36 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    env:
+      API_URL: https://flight-delay-api-288081483332.us-central1.run.app
+
+    steps:
+      - name: Wait for Cloud Build deployment
+        run: sleep 120
+
+      - name: Check health endpoint
+        run: |
+          curl --fail --silent --show-error "$API_URL/health"
+
+      - name: Check prediction endpoint
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "$API_URL/predict" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "flights": [
+                {
+                  "OPERA": "Grupo LATAM",
+                  "TIPOVUELO": "N",
+                  "MES": 3
+                }
+              ]
+            }'
