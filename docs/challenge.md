@@ -24,6 +24,15 @@ The notebook trains XGBoost models, but `xgboost` was not included in the origin
 xgboost~=3.2.0
 ```
 
+The original FastAPI stack depends on `starlette==0.20.4`, which is not compatible with `anyio>=4`. To keep the original `pytest` and `pytest-cov` versions unchanged, the following dependencies were added:
+
+```text
+anyio<4
+requests
+```
+
+This keeps FastAPI, Starlette, pytest, and the provided test client compatible without upgrading the test framework.
+
 ---
 
 ## Part I: Model
@@ -121,3 +130,52 @@ self.data = pd.read_csv(filepath_or_buffer="../data/data.csv")
 This path only resolves when pytest runs from inside `tests/`, while `make model-test` runs from the repository root.
 
 To keep both the tests and the Makefile untouched, a minimal `tests/conftest.py` was added to run the test session from the expected working directory.
+
+---
+
+## Part III: Deployment
+
+The API was deployed to Google Cloud Run using a containerized FastAPI service.
+
+Cloud Run was selected because it provides a managed deployment target for HTTP APIs, supports public HTTPS endpoints, and allows request-based billing with autoscaling.
+
+The service was configured with:
+
+```text
+Authentication: public access
+Billing: request-based
+Scaling: autoscaling
+Minimum instances: 0
+Maximum instances: 2
+Ingress: all
+```
+
+The deployed URL was added to the `STRESS_URL` variable in the Makefile.
+
+### Stress Test
+
+The stress test uses the Locust 2.x API:
+
+```python
+from locust import HttpUser, task
+```
+
+The original Locust dependency was missing or stale, and older Locust versions are incompatible with current Jinja2 releases. Since the stress test already uses the modern API, Locust was added explicitly as a 2.x dependency:
+
+```text
+locust~=2.31
+```
+
+`make stress-test` was executed against the deployed Cloud Run service and completed successfully with 0 failed requests.
+
+---
+
+## Part IV: CI/CD
+
+CI was implemented with GitHub Actions. The CI workflow runs tests and build validation on pull requests and pushes to the main development branches.
+
+CD was implemented using Cloud Run continuous deployment, backed by a Cloud Build trigger connected to the GitHub repository. The trigger runs on pushes to `main` and deploys a new Cloud Run revision automatically.
+
+The GitHub `cd.yml` workflow is kept as a post-deployment smoke test. It runs on pushes to `main` and verifies that the deployed API responds correctly through `/health` and `/predict`.
+
+This approach avoids storing GCP service account keys in GitHub while still keeping deployment automated from the release branch.
